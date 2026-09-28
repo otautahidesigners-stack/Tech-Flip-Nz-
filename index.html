@@ -1160,6 +1160,13 @@ img.skel{background:var(--soft2);animation:skel 1.1s ease-in-out infinite!import
 .adesc{font-size:14px;color:var(--mute);margin:0;flex:1}
 .abot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
 .abot .addpr strong{font-size:20px}
+.abot .btn[disabled]{opacity:.45;cursor:not-allowed}
+.accpick{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.accpick>span{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.accpick select{height:44px;padding:0 12px;border:1px solid var(--line);background:#fff;font:inherit;font-size:14px;color:var(--ink);appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%23111' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center}
+.accpick select:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .anote{margin-top:36px;padding:20px 22px;background:var(--ink);color:#fff;font-size:15px}
 .anote b{color:var(--y)}
 .arow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
@@ -3294,11 +3301,26 @@ function addonsBlock(d){
    '</ul><div class="addft"><span>'+(n?n+' add-on'+(n>1?'s':'')+' selected':'No add-ons selected')+'</span><strong>'+(n?'+ '+m2(sum):'')+'</strong></div></section>';
 }
 function accItem(k,d){const a=ACC[k];return {id:k+Date.now()+Math.random().toString(36).slice(2,5),acc:true,accId:k,devId:d?d.id:'',name:a.n+(d?' (for '+accShort(d)+')':''),colour:'',condName:'',storage:'',price:a.p,photo:a.img};}
-function accCard(k){const a=ACC[k];const fits=Object.keys(ACC_FOR).filter(c=>ACC_FOR[c].indexOf(k)>-1).map(c=>CATW[c].toLowerCase()).join(' and ');
+S.accFor=S.accFor||{};
+function accFitCats(k){return Object.keys(ACC_FOR).filter(c=>ACC_FOR[c].indexOf(k)>-1);}
+function accDevOptions(k){
+  const cats=accFitCats(k);
+  return DEV.filter(d=>cats.indexOf(d.cat)>-1&&publicDevice(d)).sort((x,y)=>x.name.localeCompare(y.name));
+}
+function accCard(k){const a=ACC[k];const cats=accFitCats(k);const fits=cats.map(c=>CATW[c].toLowerCase()).join(' and ');
   const off=Math.round((1-a.p/a.was)*100);
+  const opts=a.m?accDevOptions(k):[];
+  const chosen=a.m?(S.accFor[k]||''):'';
+  const picker=a.m?('<label class="accpick"><span>Your '+fits.replace(/s$/,'')+' model</span>'+
+    '<select data-act="acc-dev" data-k="'+k+'" aria-label="Choose your device for '+esc(a.n)+'">'+
+    '<option value="">Choose your model\u2026</option>'+
+    opts.map(d=>'<option value="'+d.id+'"'+(chosen===d.id?' selected':'')+'>'+esc(d.name)+'</option>').join('')+
+    '</select></label>'):'';
+  const addDisabled=a.m&&!chosen;
   return '<article class="acard"><div class="aimg"><img src="'+a.img+'" alt="'+esc(a.n)+'" width="377" height="480" loading="lazy"><span class="aoff">'+off+'% off</span></div>'+
-   '<div class="ainfo"><p class="atype">'+a.t+' / for '+fits+'</p><h3>'+esc(a.n)+'</h3><p class="adesc">'+esc(a.d)+'</p>'+
-   '<div class="abot"><span class="addpr"><strong>'+m2(a.p)+'</strong><s>'+m2(a.was)+'</s></span><button class="btn s" type="button" data-act="acc-add" data-k="'+k+'">Add to cart</button></div></div></article>';}
+   '<div class="ainfo"><p class="atype">'+a.t+' / for '+fits+'</p><h3>'+esc(a.n)+'</h3><p class="adesc">'+esc(a.d)+'</p>'+picker+
+   '<div class="abot"><span class="addpr"><strong>'+m2(a.p)+'</strong><s>'+m2(a.was)+'</s></span>'+
+   '<button class="btn s" type="button" data-act="acc-add" data-k="'+k+'"'+(addDisabled?' disabled title="Choose your model first"':'')+'>Add to cart</button></div></div></article>';}
 function viewAccessories(){
   const tab=F('acc.cat','All');const cats=['All'].concat(CATS);
   const ids=tab==='All'?Object.keys(ACC):ACC_FOR[tab];
@@ -3850,7 +3872,7 @@ function route(top){
 
 /* ---------- assistant ---------- */
 const CH={open:false,msgs:[],hist:[],busy:false,ctl:null,photo:null,ctx:{last:[],filters:{}}};
-let SAMPLE=null,LIM=null;
+let SAMPLE=null,LIM=null,SERVER_AI=false;
 (async function(){
   try{if(window.claude&&window.claude.use){SAMPLE=await window.claude.use('sample');
     if(SAMPLE&&SAMPLE.limits){try{LIM=await SAMPLE.limits();}catch(e){LIM=null;}}}}catch(e){SAMPLE=null;}
@@ -4065,7 +4087,7 @@ function localAnswer(q){
 
 /* ----- chat UI ----- */
 function paintChatHead(){
-  const e=$('#chatsub');if(e)e.textContent=SAMPLE?'Powered by Claude':'Built-in assistant';
+  const e=$('#chatsub');if(e)e.textContent=(SAMPLE||SERVER_AI)?'Powered by Claude':'Built-in assistant';
   const pb=$('#chatphoto');if(pb)pb.hidden=!(LIM&&LIM.images);
 }
 function msgHtml(m,last){
@@ -4128,6 +4150,29 @@ async function ask(text){
       if(e&&e.text&&e.code==='upstream_error'){bot.text=clean(e.text)+' (interrupted)';bot.pending=false;ok=true;}
       else bot.text='';
     }
+    CH.ctl=null;
+  }
+  if(!ok){
+    /* Second tier: a real Claude reply from our own server route. This is what
+       runs once the site is live on Vercel with ANTHROPIC_API_KEY set - the
+       in-page window.claude bridge above only exists inside claude.ai itself. */
+    try{
+      CH.ctl=new AbortController();paintSendBtn();
+      const sr=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},
+        signal:CH.ctl.signal,body:JSON.stringify({system:rules(!!photo),messages:CH.hist})});
+      if(sr.ok){
+        const data=await sr.json();
+        const nx=(data.text.match(/^\s*NEXT:\s*(.+)$/im)||[])[1];
+        bot.text=clean(data.text);bot.pending=false;
+        bot.sugg=nx?nx.split('|').map(x=>x.trim()).filter(Boolean).slice(0,3):[];
+        bot.ids=findMentioned(bot.text);if(bot.ids.length)CH.ctx.last=bot.ids.slice();
+        const lt=bot.text.toLowerCase();
+        if(/(not in our catalog|can't find|cannot find|isn't listed|not listed|email us)/.test(lt))bot.acts.push(['Email us about a device','contact']);
+        else if(/\bsell/.test(lt))bot.acts.push(['Sell a device','sell']);
+        else if(/trade/.test(lt))bot.acts.push(['Trade in','trade']);
+        CH.hist.push({role:'assistant',content:bot.text});SERVER_AI=true;ok=true;
+      }
+    }catch(e){/* offline, blocked, or the route/key is not set up yet - fall through */}
     CH.ctl=null;
   }
   if(!ok){const r=localAnswer(text);bot.text=r.text;bot.ids=r.ids;bot.acts=r.acts;bot.sugg=r.sugg;bot.pending=false;CH.hist.push({role:'assistant',content:r.text});
@@ -4719,7 +4764,8 @@ document.addEventListener('click',function(e){
    case 'add-cart':addToCart();break;
    case 'addon':{const d=byId(S.route.arg);if(!d)break;const sel=addonSel(d);sel[t.dataset.k]=t.checked;render();break;}
    case 'addon-all':{const d=byId(S.route.arg);if(!d)break;const sel=addonSel(d),ids=ACC_FOR[d.cat]||[],all=ids.every(k=>sel[k]);ids.forEach(k=>sel[k]=!all);render();break;}
-   case 'acc-add':{S.cart.push(accItem(t.dataset.k,null));paintCartCount();S.cartOpen=true;paintDrawers();break;}
+   case 'acc-add':{const k=t.dataset.k,a=ACC[k];if(a&&a.m&&!S.accFor[k])break;const dv=a&&a.m?byId(S.accFor[k]):null;
+     S.cart.push(accItem(k,dv));paintCartCount();S.cartOpen=true;paintDrawers();break;}
    case 'close-modal':S.modal=null;S.sent.enq=null;paintModal();break;
    case 'enq-send':sendEnq();break;
    case 'nl-send':sendNL(t.dataset.ctx,t.dataset.purpose);break;
@@ -4764,7 +4810,7 @@ document.addEventListener('click',function(e){
 function fallbackCopy(txt,done){const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){}ta.remove();}
 document.addEventListener('mousedown',function(e){if(e.target.closest&&e.target.closest('.sugg'))e.preventDefault();});
 document.addEventListener('input',function(e){const t=e.target;if(t.dataset&&t.dataset.f){S.f[t.dataset.f]=t.value;}if(t.dataset&&t.dataset.live){const pos=t.selectionStart;render();const n=document.getElementById(t.id);if(n){n.focus({preventScroll:true});try{n.setSelectionRange(pos,pos);}catch(_){}}return;}if(t.dataset&&t.dataset.act==='ed-search'){S.f['ed.q']=t.value;S.edLim=24;render();var s=document.querySelector('[data-act="ed-search"]');if(s){s.focus();s.setSelectionRange(t.value.length,t.value.length);}}});
-document.addEventListener('change',function(e){const t=e.target;if(t.id==='chatfile'){CH.photo=(t.files&&t.files[0])||null;t.value='';paintPhotoChip();return;}if(t.dataset&&t.dataset.act==='ed-cat'){S.f['ed.cat']=t.value;S.edLim=24;render();return;}if(t.dataset&&t.dataset.f){S.f[t.dataset.f]=t.value;if(t.dataset.f==='sell.brand'||t.dataset.f==='trade.brand'){delete S.f[t.dataset.f.replace('brand','model')];}if(t.dataset.re)render();}});
+document.addEventListener('change',function(e){const t=e.target;if(t.id==='chatfile'){CH.photo=(t.files&&t.files[0])||null;t.value='';paintPhotoChip();return;}if(t.dataset&&t.dataset.act==='ed-cat'){S.f['ed.cat']=t.value;S.edLim=24;render();return;}if(t.dataset&&t.dataset.act==='acc-dev'){S.accFor[t.dataset.k]=t.value;render();return;}if(t.dataset&&t.dataset.f){S.f[t.dataset.f]=t.value;if(t.dataset.f==='sell.brand'||t.dataset.f==='trade.brand'){delete S.f[t.dataset.f.replace('brand','model')];}if(t.dataset.re)render();}});
 document.addEventListener('submit',function(e){
   const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();
   if(f.dataset.form==='hsearch'){const q=f.querySelector('input').value;S.f['shop.q']=q;S.brands=[];S.f['shop.cat']='All';S.f['shop.cond']='any';if(curHash()==='#/shop'){render();}else goRoute('#/shop');}
