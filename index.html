@@ -1298,6 +1298,82 @@ small{font-size:12px}
 :focus-visible{outline:3px solid var(--ink)!important;outline-offset:2px!important}
 .hbar :focus-visible{outline-color:var(--y)!important}
 body{line-height:1.55}
+
+/* ===== FIXES: header search / Ask button, cookie bar, hero text legibility ===== */
+/* 1. Header. The search field used to be allowed to shrink to nothing, which left a
+   thin sliver jammed against the Ask PhoneTrade button. It now keeps a real minimum
+   width, and lower-priority items give up room first (everything hidden here is still
+   in the More menu). */
+.hbar .hin{min-width:0}
+.hbar .hsearch{flex:0 1 240px;width:auto;min-width:150px;margin-left:auto}
+.hbar .hask{flex:none;white-space:nowrap;margin-left:0}
+.hbar .nav{flex:none}
+.hbar .logo{flex:none}
+.hbar .cartbtn,.hbar .burger{flex:none}
+/* The page is centred in a 1240px column, so the header has 1176px to work with on any
+   wide screen. Shop, Accessories, Sell, Trade in and Contact stay in the bar; "How we
+   grade" and "Can't find it?" live in the More menu, and Ask PhoneTrade shortens to
+   "Ask". That leaves the search field a proper width. (Attribute selectors end-match
+   the path so they work for both #/route and /route links.) */
+@media(min-width:1181px){
+  .hbar .hsearch{display:block}
+  .hbar .nav a[href$="/grading"],.hbar .nav a[href$="/not-listed"]{display:none}
+  .hbar .hask-x{display:none}.hbar .hask{padding:0 14px}
+}
+
+/* 2. Cookie notice: a slim bar docked to the bottom instead of a big card that sat
+   on top of the hero text. Its height is published as --ckh so the hero can make room. */
+.ckb{left:0!important;right:0!important;bottom:0!important;max-width:none!important;margin:0!important;border-radius:0!important;padding:10px 20px!important;border-width:1px 0 0!important}
+.ckb-in{flex-wrap:nowrap;gap:8px 20px;max-width:1240px;margin:0 auto}
+.ckb p{font-size:13.5px;line-height:1.4;max-width:none;flex:1 1 auto;margin:0}
+.ckb .btn.sm{min-height:38px;padding:6px 14px}
+@media(max-width:639px){
+  .ckb{padding:10px 14px!important}
+  .ckb-in{gap:10px}
+  .ckb p{font-size:12.5px;line-height:1.35}
+  .ckb .ckx{display:none}
+  .ckb .btn.ghost.sm{display:none}
+  /* keep text and the Got it button on one row (an older rule stacked them) */
+  .ckb-in{flex-direction:row;align-items:center}
+  .ckb-btns{width:auto}
+  .ckb .btn.sm{flex:none;min-height:40px;padding:6px 16px}
+}
+/* the chat bubble sits above the cookie bar instead of underneath it */
+.chatbtn{bottom:calc(var(--ckh,0px) + 24px + env(safe-area-inset-bottom,0px));transition:bottom .3s ease}
+@media(max-width:640px){.chatbtn{bottom:calc(var(--ckh,0px) + 16px + env(safe-area-inset-bottom,0px))}}
+
+/* 3. Hero. Text is lifted clear of the cookie bar, and the giant GRADED word is sized
+   from the hero height so it can no longer run underneath the model name and price line
+   (white text on the white letters was unreadable on the iPhone 16 slide). */
+#xh{--xhh:clamp(560px,calc(100svh - var(--hdrh,190px)),1100px)}
+#xh .xh-bl{bottom:calc(var(--ckh,0px) + 20px);transition:bottom .3s ease}
+@media(min-width:640px){
+  #xh{--xhoff:210px}
+  #xh .xh-bl{bottom:calc(var(--ckh,0px) + 40px)}
+  #xh .xh-go{bottom:calc(var(--ckh,0px) + 48px)}
+  #xh .xh-ghost{top:3%}
+  #xh .xh-ghost span{font-size:min(clamp(96px,24vw,380px),max(120px,calc((var(--xhh) - var(--ckh,0px) - var(--xhoff) - 40px)/1.07)))}
+}
+@media(min-width:640px){
+  #xh .xh-go{right:100px}   /* clear of the chat bubble */
+}
+@media(min-width:640px) and (max-width:1099px){
+  /* tablet: move the big phone right so it stops sitting behind the text block */
+  #xh .xh-it[data-r=c]{left:68%;height:58%}
+  #xh .xh-it[data-r=l]{opacity:0}
+}
+@media(min-width:1100px){
+  #xh{--xhoff:245px}
+  #xh .xh-bl{bottom:calc(var(--ckh,0px) + 72px)}
+  #xh .xh-go{bottom:112px}
+}
+@media(min-width:1280px){
+  #xh .xh-ghost span{font-size:min(clamp(96px,27vw,380px),max(120px,calc((var(--xhh) - var(--ckh,0px) - var(--xhoff) - 40px)/1.07)))}
+}
+@media(max-width:639px){
+  /* keep the phone above the text while the cookie bar is showing */
+  #xh .xh-it[data-r=c]{bottom:calc(29% + var(--ckh,0px)*.9);height:calc(40% - var(--ckh,0px)*.9)}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js" defer crossorigin="anonymous"></script>
 </head>
@@ -1309,7 +1385,7 @@ body{line-height:1.55}
 <footer id="ftr" class="foot"></footer>
 <div id="ckb" class="ckb" role="region" aria-label="Cookie notice" hidden>
   <div class="ckb-in">
-    <p><b>We keep things simple.</b> This site stores your cart and preferences in your own browser. No advertising trackers, no profiling, nothing sold on. <a href="#/privacy">Read our privacy policy</a>.</p>
+    <p><b>We keep things simple.</b> <span class="ckx">This site stores your cart and preferences in your own browser. </span>No advertising trackers, no profiling, nothing sold on. <a href="#/privacy">Read our privacy policy</a>.</p>
     <div class="ckb-btns">
       <button class="btn sm" type="button" data-ck="ok">Got it</button>
       <a class="btn ghost sm" href="#/privacy">More detail</a>
@@ -3388,7 +3464,7 @@ function paintHeader(){
   $('#hdr').innerHTML='<div class="top"><div class="wrap topin"><span>'+TS('topbar')+'</span><span class="topr"><a href="tel:'+TEL+'">'+PHONE+'</a><a href="mailto:'+EMAIL+'">'+EMAIL+'</a></span></div></div>'+
    '<div class="hbar"><div class="wrap hin"><a class="logo" href="#/" aria-label="PhoneTrade New Zealand, home"><span class="mark">'+ico('swap',20)+'</span><span><b>PhoneTrade</b><small>New Zealand</small></span></a>'+
    '<nav class="nav" aria-label="Main">'+links.map(l=>'<a href="'+l[0]+'"'+(S.route.name===l[2]?' aria-current="page"':'')+'>'+l[1]+'</a>').join('')+'</nav>'+
-   '<form class="hsearch" data-form="hsearch" role="search">'+ico('search',20)+'<input type="search" aria-label="Search devices" placeholder="Search devices"></form><button class="btn s hask" type="button" data-act="chat">'+ico('chat',18)+' Ask PhoneTrade</button>'+
+   '<form class="hsearch" data-form="hsearch" role="search">'+ico('search',20)+'<input type="search" aria-label="Search devices" placeholder="Search devices"></form><button class="btn s hask" type="button" data-act="chat" aria-label="Ask PhoneTrade">'+ico('chat',18)+' Ask<span class="hask-x"> PhoneTrade</span></button>'+
    '<button class="cartbtn" type="button" data-act="cart-open" aria-label="Shopping cart">'+ico('cart',20)+'<span class="cartbadge" id="cartcount"></span></button>'+
    '<button class="burger" type="button" data-act="menu" aria-label="More options" aria-expanded="'+S.menu+'" aria-controls="mnav">'+
      '<span class="blines" aria-hidden="true"><i></i><i></i><i></i></span></button></div>'+
@@ -4701,11 +4777,13 @@ window.addEventListener('hashchange',function(){if(/^#\/./.test(location.hash)){
 (function(){
   var K='pt_ck_ok';
   function ls(m,k,v){try{var S=window['local'+'Storage'];return v===undefined?S[m](k):S[m](k,v);}catch(e){return null;}}
-  function show(){var b=document.getElementById('ckb');if(!b)return;if(ls('getItem',K)==='1')return;b.hidden=false;}
+  function fit(){var b=document.getElementById('ckb');var h=(b&&!b.hidden&&!b.classList.contains('out'))?b.offsetHeight:0;document.documentElement.style.setProperty('--ckh',h+'px');}
+  function show(){var b=document.getElementById('ckb');if(!b)return;if(ls('getItem',K)==='1')return;b.hidden=false;fit();}
+  window.addEventListener('resize',fit);
   document.addEventListener('click',function(e){
     var t=e.target.closest('[data-ck]');if(!t)return;
     var b=document.getElementById('ckb');if(!b)return;
-    ls('setItem',K,'1');b.classList.add('out');setTimeout(function(){b.hidden=true;b.classList.remove('out');},360);
+    ls('setItem',K,'1');b.classList.add('out');fit();setTimeout(function(){b.hidden=true;b.classList.remove('out');fit();},360);
   });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(show,600);});
   else setTimeout(show,600);
