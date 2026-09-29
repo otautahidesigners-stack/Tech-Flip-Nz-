@@ -1349,33 +1349,28 @@ body{line-height:1.55}
 .chatbtn{bottom:calc(var(--ckh,0px) + 24px + env(safe-area-inset-bottom,0px));transition:bottom .3s ease}
 @media(max-width:640px){.chatbtn{bottom:calc(var(--ckh,0px) + 16px + env(safe-area-inset-bottom,0px))}}
 
-/* 3. Hero. Text is lifted clear of the cookie bar, and the giant GRADED word is sized
-   from the hero height so it can no longer run underneath the model name and price line
-   (white text on the white letters was unreadable on the iPhone 16 slide). */
-#xh{--xhh:clamp(560px,calc(100svh - var(--hdrh,190px)),1100px)}
+/* 3. Hero. GRADED is back to its original full size. Instead of shrinking it to
+   dodge the text, the model name and price now sit on their own solid card in
+   the slide's own colour, so they read cleanly no matter how big the ghost
+   word is or what part of it sits behind them. The card also lifts clear of
+   the cookie bar automatically. */
 #xh .xh-bl{bottom:calc(var(--ckh,0px) + 20px);transition:bottom .3s ease}
+#xh .xh-txt{background:var(--xhc);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:14px 16px;border-radius:2px;display:inline-block;max-width:calc(100% - 8px);
+  box-shadow:0 1px 0 rgba(0,0,0,.06)}
 @media(min-width:640px){
-  #xh{--xhoff:210px}
   #xh .xh-bl{bottom:calc(var(--ckh,0px) + 40px)}
-  #xh .xh-go{bottom:calc(var(--ckh,0px) + 48px)}
-  #xh .xh-ghost{top:3%}
-  #xh .xh-ghost span{font-size:min(clamp(96px,24vw,380px),max(120px,calc((var(--xhh) - var(--ckh,0px) - var(--xhoff) - 40px)/1.07)))}
-}
-@media(min-width:640px){
-  #xh .xh-go{right:100px}   /* clear of the chat bubble */
+  #xh .xh-go{bottom:calc(var(--ckh,0px) + 48px);right:100px}
+  #xh .xh-txt{padding:20px 26px}
 }
 @media(min-width:640px) and (max-width:1099px){
-  /* tablet: move the big phone right so it stops sitting behind the text block */
+  /* tablet: move the big phone right so it stops sitting behind the text card */
   #xh .xh-it[data-r=c]{left:68%;height:58%}
   #xh .xh-it[data-r=l]{opacity:0}
 }
 @media(min-width:1100px){
-  #xh{--xhoff:245px}
   #xh .xh-bl{bottom:calc(var(--ckh,0px) + 72px)}
   #xh .xh-go{bottom:112px}
-}
-@media(min-width:1280px){
-  #xh .xh-ghost span{font-size:min(clamp(96px,27vw,380px),max(120px,calc((var(--xhh) - var(--ckh,0px) - var(--xhoff) - 40px)/1.07)))}
 }
 @media(max-width:639px){
   /* keep the phone above the text while the cookie bar is showing */
@@ -3160,7 +3155,7 @@ function xLine(t){var d=byId(t.id);return (d?'From '+money(d.min)+'. ':'')+t.lin
 function xHero(){
   var a=XS.i,t=XH[a];
   var grain="url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E\")";
-  return '<section class="xh" id="xh" aria-roledescription="carousel" aria-label="Featured devices" style="background-color:'+t.bg+';color:'+t.fg+'">'+
+  return '<section class="xh" id="xh" aria-roledescription="carousel" aria-label="Featured devices" style="background-color:'+t.bg+';color:'+t.fg+';--xhc:'+t.bg+'F2">'+
    '<div class="xh-grain" aria-hidden="true" style="background-image:'+grain+'"></div>'+
    '<div class="xh-ghost" aria-hidden="true"><span style="color:'+t.ghost+'">Graded</span></div>'+
    '<p class="xh-brand">PhoneTrade NZ<span class="xh-no">0'+(a+1)+' / 04</span></p>'+
@@ -3177,7 +3172,7 @@ function xTo(k){
   if(XS.lock||k===XS.i)return;
   XS.lock=true;XS.i=k;setTimeout(function(){XS.lock=false;},XS.DUR*0.7);
   var a=XS.i,t=XH[a];
-  h.style.backgroundColor=t.bg;h.style.color=t.fg;
+  h.style.backgroundColor=t.bg;h.style.color=t.fg;h.style.setProperty('--xhc',t.bg+'F2');
   h.querySelector('.xh-ghost span').style.color=t.ghost;
   [].forEach.call(h.querySelectorAll('.xh-it'),function(el){el.dataset.r=xRole(+el.dataset.k,a);});
   [].forEach.call(h.querySelectorAll('.xh-dot'),function(el,j){el.classList.remove('on');el.removeAttribute('aria-current');if(j===a){void el.offsetWidth;el.classList.add('on');el.setAttribute('aria-current','true');}});
