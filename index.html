@@ -830,19 +830,31 @@ h1.serif,h2.serif{line-height:1.05}
 .mnav a{color:#fff}
 
 /* --- shop by category strip --- */
-.catnav{background:#f8f7f4;border-bottom:1px solid var(--line);overflow:hidden}
-.catnav-in{display:flex;align-items:center;gap:8px;max-width:1240px;margin:0 auto;
-  padding:10px 32px;overflow-x:auto;scrollbar-width:none}
-.catnav-in::-webkit-scrollbar{display:none}
+.catnav{background:#f8f7f4;border-bottom:1px solid var(--line)}
+.catnav-in{display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:1240px;margin:0 auto;
+  padding:14px 32px}
 .catnav-lbl{color:var(--ink-2);font-size:11.5px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.1em;flex:none;padding-right:6px}
+  letter-spacing:.1em;flex:0 0 100%;padding-right:6px}
+.ccard{flex:none;position:relative;display:block;width:150px;height:96px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--line);background:#fff}
+.ccard img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}
+.ccard:hover img{transform:scale(1.05)}
+.ccard-lbl{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;
+  gap:6px;padding:7px 10px;font-size:13px;font-weight:700;color:#fff;
+  background:linear-gradient(to top,rgba(0,0,0,.68),rgba(0,0,0,0))}
+.ccard-lbl small{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.25)}
 .cpill{flex:none;display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:6px;
   font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;
   background:#fff;border:1px solid var(--line);transition:background .18s,border-color .18s,color .18s}
 .cpill small{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--wash);color:var(--ink-2)}
 .cpill:hover,.cpill.on{background:var(--y);border-color:var(--y);color:var(--ink)}
 .cpill:hover small,.cpill.on small{background:rgba(0,0,0,.12);color:var(--ink)}
-@media(max-width:640px){.catnav-lbl{display:none}.catnav-in{padding:9px 16px}}
+@media(max-width:640px){
+  .catnav-lbl{display:none}
+  .catnav-in{padding:12px 16px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .catnav-in::-webkit-scrollbar{display:none}
+  .ccard{width:120px;height:80px}
+}
 
 /* --- buttons --- */
 .btn{border-radius:8px;font-weight:700}
@@ -3507,12 +3519,14 @@ function paintHeader(){
          '<a href="#/accessibility">Accessibility</a></div>'+
      '</div></div></div>'+catNav();
 }
-/* TechCrazy-style "shop by category" strip: the three real categories plus the
-   brand+category combinations that actually exist in the catalog. */
+/* TechCrazy-style "shop by category" strip: an image card for each of the
+   three real categories (phones/tablets/laptops), then the plain text pills
+   for "All devices" plus the brand+category combos that exist in the catalog. */
+var CATIMG={Phone:'assets/cat/phones.webp',Tablet:'assets/cat/tablets.webp',Laptop:'assets/cat/laptops.webp'};
 function catNav(){
+  var cats=CATS.map(function(k){return ['cat',k,CATW[k],DEV.filter(function(d){return d.cat===k&&publicDevice(d);}).length];});
   var items=[];
   items.push(['cat','All','All devices',DEV.filter(d=>publicDevice(d)).length]);
-  CATS.forEach(function(k){items.push(['cat',k,CATW[k],DEV.filter(function(d){return d.cat===k&&publicDevice(d);}).length]);});
   var combos=[['Apple','Phone','iPhones'],['Samsung','Phone','Samsung Phones'],['Google','Phone','Google Pixel'],
               ['Xiaomi','Phone','Xiaomi'],['OnePlus','Phone','OnePlus'],['Oppo','Phone','Oppo'],['Huawei','Phone','Huawei'],
               ['Apple','Laptop','MacBooks'],['Apple','Tablet','iPads'],['Samsung','Tablet','Galaxy Tabs'],
@@ -3523,6 +3537,11 @@ function catNav(){
   });
   return '<nav class="catnav" aria-label="Shop by category"><div class="catnav-in">'+
     '<span class="catnav-lbl">Shop by category</span>'+
+    cats.map(function(it){
+      return '<a class="ccard" href="#/shop" data-act="'+it[0]+'" data-v="'+esc(it[1])+'">'+
+             '<img src="'+CATIMG[it[1]]+'" alt="" width="320" height="200" loading="lazy">'+
+             '<span class="ccard-lbl">'+esc(it[2])+'<small>'+it[3]+'</small></span></a>';
+    }).join('')+
     items.map(function(it,i){
       return '<a class="cpill c'+(i%6)+'" href="#/shop" data-act="'+it[0]+'" data-v="'+esc(it[1])+'">'+
              esc(it[2])+'<small>'+it[3]+'</small></a>';
