@@ -1618,6 +1618,7 @@ const DEV=[];
 const DEFAULT_RECORDS=RAW.trim().split('\n').map(l=>{const a=l.split('|');const storage={};if(a[5]&&a[5].indexOf(':')>-1){a[5].split(';').forEach(s=>{const parts=s.split(':');const gb=+parts[0];const pr=parts[1]?parts[1].split(',').map(x=>x==='-'?null:+x):[null,null,null];storage[gb]={pristine:pr[0],excellent:pr[1],good:pr[2]};});}var gbList=Object.keys(storage).map(Number).sort(function(x,y){return x-y});var firstGb=gbList[0]||0;var fp=storage[firstGb]||{pristine:null,excellent:null,good:null};return {brand:a[0],model:a[1],cat:a[2],year:+a[3],gb:firstGb,colours:a[4]?a[4].split(',').map(function(s){return s.trim();}).filter(Boolean):[],p:fp.pristine,e:fp.excellent,d:fp.good,storage:storage};});
 const DEFAULT_FEATURED=['iphone-16-pro-max','galaxy-s24-ultra','pixel-8-pro','xiaomi-14','ipad-pro-12-9','galaxy-tab-s9','razer-blade-14-2023','iphone-15'];
 function buildDevices(rows){
+  rows=(rows||[]).filter(function(r){return +r.year>=2015;});
   const nz=v=>(v===null||v===undefined||v===''||isNaN(+v))?null:+v;
   DEV.length=0;
   rows.forEach(r=>{
