@@ -13,6 +13,31 @@ export default async function handler(req, res) {
     return;
   }
 
+  // This endpoint has no server-side copy of the live device catalog, so the
+  // system prompt (which embeds real catalog/pricing data) has to be sent by
+  // the client. That means a bare POST could carry ANY system prompt an
+  // attacker writes, turning this into a free, unrestricted Claude proxy.
+  // Two real, but not bulletproof, mitigations: only accept requests whose
+  // browser-set Origin/Referer matches this site (stops other sites' pages
+  // and simple scripted abuse - a non-browser client can still spoof this
+  // header), and require the prompt to carry this site's own marker line
+  // (raises the bar above a naive curl request - anyone who reads the
+  // client bundle can still find and replay it). Real, complete protection
+  // needs the prompt built server-side instead of trusted from the client;
+  // that isn't done here because it would mean duplicating the whole catalog
+  // server-side, which this static-site architecture doesn't support.
+  const ALLOWED_ORIGINS = ['https://phonetrade.nz', 'https://www.phonetrade.nz'];
+  const origin = req.headers.origin || '';
+  const referer = req.headers.referer || req.headers.referrer || '';
+  const fromAllowedOrigin = ALLOWED_ORIGINS.some(o => origin === o || referer.indexOf(o + '/') === 0);
+  // Also allow Vercel's own preview/production deployment hosts for this project.
+  const host = req.headers.host || '';
+  const fromThisHost = !!origin && origin.replace(/^https?:\/\//, '') === host;
+  if (!fromAllowedOrigin && !fromThisHost) {
+    res.status(403).json({ error: 'forbidden_origin' });
+    return;
+  }
+
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     res.status(503).json({ error: 'not_configured' });
@@ -24,8 +49,13 @@ export default async function handler(req, res) {
     try { body = JSON.parse(body); } catch (e) { body = null; }
   }
   const system = String((body && body.system) || '').slice(0, 16000);
+  const PROMPT_MARKER = 'PhoneTrade New Zealand'; // present in the real rules() prompt only
+  if (!system || system.indexOf(PROMPT_MARKER) === -1) {
+    res.status(400).json({ error: 'bad_request' });
+    return;
+  }
   const rawMsgs = Array.isArray(body && body.messages) ? body.messages : [];
-  if (!system || !rawMsgs.length) {
+  if (!rawMsgs.length) {
     res.status(400).json({ error: 'bad_request' });
     return;
   }
@@ -69,9 +99,11 @@ export default async function handler(req, res) {
 
     const data = await upstream.json().catch(() => null);
     if (!upstream.ok || !data) {
-      res.status(upstream.status || 502).json({
-        error: (data && data.error && data.error.message) || 'upstream_error',
-      });
+      // Log the real reason server-side only - never echo upstream error
+      // details (could include internal account/rate-limit specifics) back
+      // to an untrusted browser client.
+      try { console.error('PhoneTrade /api/chat upstream error:', upstream.status, data && data.error); } catch (_) {}
+      res.status(upstream.status === 429 ? 429 : 502).json({ error: 'upstream_error' });
       return;
     }
 
