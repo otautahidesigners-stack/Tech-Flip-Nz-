@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /editor
 
 # AI / generative-search crawlers (GEO): explicitly allowed so assistants can
 # read and cite real product, pricing and policy information from this site.
