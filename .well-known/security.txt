@@ -1,4 +1,0 @@
-Contact: mailto:ravinderbhullar1789@gmail.com
-Expires: 2027-09-29T00:00:00.000Z
-Preferred-Languages: en
-Canonical: https://phonetrade.nz/.well-known/security.txt

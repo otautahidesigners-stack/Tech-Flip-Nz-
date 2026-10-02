@@ -2,7 +2,7 @@
 'use strict';
 
 /* ---------- constants ---------- */
-let EMAIL='ravinderbhullar1789@gmail.com', PHONE='022 693 4984', TEL='0226934984';
+let EMAIL='', PHONE='', TEL='';
 
 /* Catalog transcribed from the supplied spreadsheet. Format:
    brand|model|category|year|storage GB|colours|Pristine,Excellent,Good (NZD). "-" = no price supplied. */
@@ -1405,7 +1405,7 @@ function photoSet(d,col){
 }
 /* Devices with no real photo are hidden from the public catalogue (they would
    show a broken image or a generic placeholder). They remain editable in admin
-   so Ravinder can add the exact photo and flip them back on. */
+   so an admin can add the exact photo and flip them back on. */
 function visOf(d){var m=(typeof SITE!=='undefined'&&SITE&&SITE.vis)||{};return m[d.uid||d.id]||'';}
 function publicDevice(d){var v=visOf(d);if(v==='hidden')return false;if(v==='public')return true;return photoSet(d,d.colours[0])!==null;}
 function pic(d,col,cond){
@@ -1516,7 +1516,7 @@ const TX=[
  ['hero.l2','Home page','Headline, line 2','text','tech, honestly'],
  ['hero.l3','Home page','Headline, line 3','text','graded.'],
  ['hero.lead','Home page','Headline paragraph','area','Phones, tablets and laptops in three plain conditions: Pristine, Excellent and Good. Tap a condition to see exactly what it means.'],
- ['trust','Home page','Four reassurance points (Title | Text, one per line)','pairs',[['Tested and graded','Every device gets one of three clear conditions.'],['Buy, sell or trade in','One place for all three.'],['Bank transfer or store credit','You choose how you are paid.'],['Real people','Call {phone} or email us.']]],
+ ['trust','Home page','Four reassurance points (Title | Text, one per line)','pairs',[['Tested and graded','Every device gets one of three clear conditions.'],['Buy, sell or trade in','One place for all three.'],['Bank transfer or store credit','You choose how you are paid.'],['Real people','Use the contact form, no bots.']]],
  ['cats.h','Home page','Shop by device heading','text','Shop by device'],
  ['feat.h','Home page','Featured devices heading','text','Featured devices'],
  ['band.h','Home page','Estimator heading','text','What is your device worth?'],
@@ -1606,37 +1606,30 @@ var RL=(function(){
   return {hit:hit,wait:wait,get:get,put:put};
 })();
 var PAGE_T=Date.now();
-/* ---------- email / formsubmit ---------- */
-var FORMSUBMIT_FALLBACK='ravinderbhullar1789@gmail.com';
-function fsUrl(){var e=(typeof EMAIL==='string'&&EMAIL.indexOf('@')>0)?EMAIL:FORMSUBMIT_FALLBACK;return 'https://formsubmit.co/ajax/'+encodeURIComponent(e.trim());}
+/* ---------- email / enquiry relay ---------- */
 async function submitForm(data){
-  /* FormSubmit delivers to the address in fsUrl(). Two things to know:
-     1) FormSubmit needs a real http(s) origin - it rejects file:// and some
-        sandboxed preview frames with "open this page through a web server".
-     2) The very first submission from a new domain triggers a one-off
-        activation email that the recipient must click before anything is
-        forwarded. Until that is clicked, submissions are held, not delivered.
+  /* Submissions go to /api/enquiry, a server-side relay - the real
+     destination address lives only in a Vercel environment variable and is
+     never present in this file or anywhere else the browser downloads.
      A 20s timeout keeps the button from spinning forever, and any failure
-     falls back to the mailto / phone block in sentBlock(). */
+     falls back to the contact-page link in sentBlock(). */
   var ctl=(typeof AbortController!=='undefined')?new AbortController():null;
   var timer=setTimeout(function(){try{ctl&&ctl.abort();}catch(e){}},20000);
   try{
-    var payload=Object.assign({_subject:data._subject||'PhoneTrade enquiry',_template:'table',_captcha:'false'},data);
+    var payload=Object.assign({_subject:data._subject||'PhoneTrade enquiry'},data);
     var opt={method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload)};
     if(ctl)opt.signal=ctl.signal;
-    var r=await fetch(fsUrl(),opt);
+    var r=await fetch('/api/enquiry',opt);
     clearTimeout(timer);
     var j=await r.json().catch(function(){return{};});
-    var ok=(j.success===true||j.success==='true'||j.status==='success');
-    if(!ok&&j.success===undefined&&r.ok)ok=true;   /* unexpected but 2xx body */
-    if(!ok)try{console.warn('PhoneTrade form not delivered:',j.message||r.status);}catch(e){}
-    return ok;
+    if(!j.ok)try{console.warn('PhoneTrade form not delivered:',j.error||r.status);}catch(e){}
+    return !!j.ok;
   }catch(e){clearTimeout(timer);try{console.warn('PhoneTrade form error:',e&&e.name);}catch(_){}return false;}
 }
 function openMail(ctx,subject,lines){
   if(Date.now()-PAGE_T<2500){S.err[ctx]='Please check your details, then press send again.';render();return;}
   var w=RL.hit('form',5,3600000,20000);
-  if(w){S.err[ctx]='You have sent several enquiries in a short time. Please try again in '+RL.wait(w)+', or call us on '+PHONE+'.';render();return;}
+  if(w){S.err[ctx]='You have sent several enquiries in a short time. Please try again in '+RL.wait(w)+'.';render();return;}
   var data={_subject:subject,_honey:''};
   lines.forEach(function(l){var i=l.indexOf(': ');if(i>0)data[l.slice(0,i)]=l.slice(i+2);else data[l]=l;});
   S.sending=ctx;render();
@@ -1648,24 +1641,23 @@ function need(ctx,pairs){for(const p of pairs){if(!String(F(p[0])).trim()){S.err
 function needContact(ctx,pre){
   if(!need(ctx,[[pre+'.name','your name'],[pre+'.phone','a contact number']]))return false;return true;}
 function sentBlock(ctx){const s=S.sent[ctx];
-  if(!s.ok)return '<div class="box sent" role="status"><h3 class="serif">Submission failed</h3><p>Something went wrong sending your enquiry. Please try again or email us directly.</p><div class="ctas"><a class="btn" href="mailto:'+EMAIL+'">'+ico('mail',20)+' Email us</a><a class="btn ghost" href="tel:'+TEL+'">Call '+PHONE+'</a></div></div>';
+  if(!s.ok)return '<div class="box sent" role="status"><h3 class="serif">Submission failed</h3><p>Something went wrong sending your enquiry. Please try again shortly.</p><div class="ctas"><a class="btn" href="#/contact">'+ico('mail',20)+' Try the contact form</a></div></div>';
   return '<div class="box sent" role="status"><h3 class="serif">Enquiry sent</h3><p>Your enquiry has been submitted successfully. We will get back to you at the phone number or email you provided.</p>'+
-   '<p class="sm mute">Or email <a class="lnk" href="mailto:'+EMAIL+'">'+EMAIL+'</a> or call <a class="lnk" href="tel:'+TEL+'">'+PHONE+'</a>.</p>'+
    '<p><button class="lnk sm" type="button" data-act="unsend" data-ctx="'+ctx+'">Start a new message</button></p></div>';}
 
 /* "can't find your device" panel, used across the site */
-function nlLink(txt){return '<a class="nlmini" href="#/not-listed">'+ico('mail',18)+'<span>'+(txt||"Can\'t find the device you want? Email us directly")+'</span>'+ico('arrow',16)+'</a>';}
+function nlLink(txt){return '<a class="nlmini" href="#/not-listed">'+ico('mail',18)+'<span>'+(txt||"Can\'t find the device you want? Use the contact form")+'</span>'+ico('arrow',16)+'</a>';}
 function notListed(ctx,purpose,title){
   if(S.sent[ctx]) return sentBlock(ctx);
   const k='nl.'+ctx+'.';
-  return '<div class="box" id="nl-'+ctx+'"><div class="stack" style="gap:8px"><h3 class="serif">'+(title||"Can't find your device?")+'</h3><p class="mute">Email us directly. Tell us who you are, how to reach you and which device it is, and we will get back to you about buying, selling or trading it in.</p></div>'+
+  return '<div class="box" id="nl-'+ctx+'"><div class="stack" style="gap:8px"><h3 class="serif">'+(title||"Can't find your device?")+'</h3><p class="mute">Use the form below. Tell us who you are, how to reach you and which device it is, and we will get back to you about buying, selling or trading it in.</p></div>'+
    '<div class="row2">'+sel(k+'purpose','I want to',[['Buy','Buy'],['Sell','Sell'],['Trade in','Trade in']],{def:purpose})+fld(k+'name','Your name',{req:1,ac:'name'})+'</div>'+
    '<div class="row2">'+fld(k+'phone','Contact number',{req:1,type:'tel',ac:'tel',im:'tel'})+fld(k+'email','Email (optional)',{type:'email',ac:'email'})+'</div>'+
    '<div class="row2">'+sel(k+'type','Device type',[['Phone','Phone'],['Tablet','Tablet'],['Laptop','Laptop'],['Other','Other']],{def:'Phone'})+fld(k+'brand','Company or brand',{ph:'e.g. Nokia, Sony, Motorola'})+'</div>'+
    fld(k+'model','Model',{ph:'e.g. Xperia 1 IV'})+
    fld(k+'notes','Anything else? (optional)',{area:1,rows:3})+
    (S.err[ctx]?'<p class="err" role="alert">'+S.err[ctx]+'</p>':'')+
-   '<div class="ctas"><button class="btn" type="button" data-act="nl-send" data-ctx="'+ctx+'" data-purpose="'+purpose+'">'+ico('mail',20)+' Email us about this device</button><span class="sm mute">Goes to '+EMAIL+'</span></div></div>';}
+   '<div class="ctas"><button class="btn" type="button" data-act="nl-send" data-ctx="'+ctx+'" data-purpose="'+purpose+'">'+ico('mail',20)+' Send enquiry</button></div></div>';}
 function sendNL(ctx,purpose){
   const k='nl.'+ctx+'.';
   if(!need(ctx,[[k+'name','your name'],[k+'phone','a contact number'],[k+'model','the model']]))return;
@@ -1811,7 +1803,7 @@ function viewHome(){
     '<div class="panel soft"><h3 class="serif">'+TS('sellp.h')+'</h3><ul class="ticks">'+TL('sellp.ticks').map(t=>'<li>'+ico('check',20)+t+'</li>').join('')+'</ul><a class="btn" href="#/sell">Sell your device</a></div>'+
     '<div class="panel dark"><h3 class="serif">'+TS('tradep.h')+'</h3><ul class="ticks">'+TL('tradep.ticks').map(t=>'<li>'+ico('check',20)+t+'</li>').join('')+'</ul><a class="btn white" href="#/trade-in">Trade in a device</a></div></div></section>'+
    '<section class="wrap" style="padding-bottom:96px"><div class="contact-strip"><div class="stack" style="gap:14px"><h2 class="serif">'+TS('contact.h')+'</h2><p class="lead">'+TS('contact.lead')+'</p></div>'+
-    '<div class="stack" style="gap:14px;align-items:flex-start"><a class="btn" href="#/contact">'+ico('mail',20)+' Email us directly</a><a class="btn ghost" href="tel:'+TEL+'">'+ico('call',20)+' Call '+PHONE+'</a></div></div></section>';
+    '<div class="stack" style="gap:14px;align-items:flex-start"><a class="btn" href="#/contact">'+ico('mail',20)+' Contact us</a></div></div></section>';
 }
 
 const BRAND_RANK=['Apple','Samsung','Google','OnePlus','Xiaomi','Oppo','Nothing','Huawei','Motorola','Sony','Lenovo','Microsoft','Dell','HP','ASUS','Acer'];
@@ -2077,7 +2069,7 @@ function viewContact(){
 function paintHeader(){
   const r=S.route.name,cur=n=>r===n?' aria-current="page"':'';
   const links=[['#/shop','Shop','shop'],['#/accessories','Accessories','accessories'],['#/sell','Sell','sell'],['#/trade-in','Trade in','trade-in'],['#/grading','How we grade','grading'],['#/not-listed',"Can't find it?",'not-listed'],['#/contact','Contact','contact']];
-  $('#hdr').innerHTML='<div class="top"><div class="wrap topin"><span>'+TS('topbar')+'</span><span class="topr"><a href="tel:'+TEL+'">'+PHONE+'</a><a href="mailto:'+EMAIL+'">'+EMAIL+'</a></span></div></div>'+
+  $('#hdr').innerHTML='<div class="top"><div class="wrap topin"><span>'+TS('topbar')+'</span><span class=\"topr\"><a class=\"lnk\" href=\"#/contact\">Contact us</a></span></div></div>'+
    '<div class="hbar"><div class="wrap hin"><a class="logo" href="#/" aria-label="PhoneTrade New Zealand, home"><span class="mark">'+ico('swap',20)+'</span><span><b>PhoneTrade</b><small>New Zealand</small></span></a>'+
    '<nav class="nav" aria-label="Main">'+links.map(l=>'<a href="'+l[0]+'"'+(S.route.name===l[2]?' aria-current="page"':'')+'>'+l[1]+'</a>').join('')+'</nav>'+
    '<form class="hsearch" data-form="hsearch" role="search">'+ico('search',20)+'<input type="search" aria-label="Search devices" placeholder="Search devices"></form><button class="btn s hask" type="button" data-act="chat" aria-label="Ask PhoneTrade">'+ico('chat',18)+' Ask<span class="hask-x"> PhoneTrade</span></button>'+
@@ -2098,9 +2090,7 @@ function paintHeader(){
          CATS.map(function(k){return '<a href="#/shop" data-act="cat" data-v="'+k+'">'+CATW[k]+'</a>';}).join('')+
          '<a href="#/shop" data-act="cat" data-v="All">All '+DEV.length+' devices</a></div>'+
        '<div class="mncol"><h4>PhoneTrade</h4>'+
-         '<a href="tel:'+TEL+'">Call '+PHONE+'</a>'+
-         '<a href="mailto:'+EMAIL+'">Email us</a>'+
-         
+         '<a href="#/contact">Contact us</a>'+
          '<a href="#/privacy">Privacy policy</a>'+
          '<a href="#/terms">Terms &amp; conditions</a>'+
          '<a href="#/accessibility">Accessibility</a></div>'+
@@ -2262,7 +2252,7 @@ function viewNotListed(){
    '<ul class="nlwhy">'+
     [['search','Any make or model','Nokia, Sony, Motorola, Huawei, older Apple and Samsung, anything.'],
      ['swap','Buying or selling','Tell us which way round it is and we will quote accordingly.'],
-     ['call','A real reply','Straight to '+EMAIL+' and '+PHONE+'. No bots, no queue.']]
+     ['call','A real reply','A real person reads every message. No bots, no queue.']]
     .map(function(t){return '<li><span class="nlic">'+ico(t[0],20)+'</span><div><b>'+t[1]+'</b><span class="sm mute">'+t[2]+'</span></div></li>';}).join('')+
    '</ul></div>'+
    '<div style="max-width:880px;margin-top:40px">'+notListed('notlisted','Buy','Send us the device details')+'</div></section>';
@@ -2338,7 +2328,7 @@ function viewLegal(which){
    ['Your rights','Under the Privacy Act 2020 you can ask us what personal information we hold about you, ask us to correct it, and ask us to delete it where we are not required to keep it. Email '+EMAIL+' and we will respond within 20 working days.'],
    ['Cookies and tracking','This website stores your shopping cart and your saved preferences in your own browser. It does not run advertising trackers and does not build a profile of you. You can clear this at any time by clearing your browser data.'],
    ['Security','Your enquiry is transmitted over an encrypted connection. Admin access to this website is password protected. If a privacy breach ever occurs that could cause you serious harm, we will notify you and the Office of the Privacy Commissioner.'],
-   ['Contact','Questions or complaints about privacy: '+EMAIL+' or '+PHONE+'. If you are not satisfied with our response you may complain to the Office of the Privacy Commissioner at privacy.org.nz.']];
+   ['Contact','Questions or complaints about privacy: use the contact form on this site. If you are not satisfied with our response you may complain to the Office of the Privacy Commissioner at privacy.org.nz.']];
   const terms=[
    ['About these terms','These terms apply when you buy a device from PhoneTrade New Zealand, sell a device to us, or trade one in. By placing an order or accepting a quote you agree to them.'],
    ['Grading and condition','Every device is graded Pristine, Excellent or Good and the grade describes its cosmetic condition honestly. Battery health, functional testing and any noted faults are listed on the device page. Photographs and illustrations are representative of the model and colour, not of the exact individual unit.'],
@@ -2350,7 +2340,7 @@ function viewLegal(which){
    ['Data on your device','Erase your personal data before sending a device to us. We factory-reset every device we receive, but we are not responsible for data you leave on it.'],
    ['Liability','Where the law allows us to limit our liability, our liability to you is limited to the amount you paid us for the device concerned. Nothing in these terms limits your rights under the Consumer Guarantees Act or the Fair Trading Act.'],
    ['Governing law','These terms are governed by New Zealand law, and the New Zealand courts have jurisdiction.'],
-   ['Contact','PhoneTrade New Zealand, Christchurch, New Zealand. '+EMAIL+' or '+PHONE+'.']];
+   ['Contact','PhoneTrade New Zealand, Christchurch, New Zealand. Use the contact form on this site.']];
   const isP=which==='privacy',rows=isP?privacy:terms;
   return '<section class="wrap legal"><p class="crumb"><a href="#/">Home</a> / '+(isP?'Privacy policy':'Terms and conditions')+'</p>'+
    '<h1 class="serif">'+(isP?'Privacy policy':'Terms and conditions')+'</h1>'+
@@ -2372,9 +2362,9 @@ function viewAccessibility(){
    ['Forms','Our forms have labels for every field, clear error messages, and instructions where needed. Required fields are marked. You can submit forms using the keyboard.'],
    ['Video and media','Any video content we add will have captions or a text alternative. We do not autoplay video with sound.'],
    ['Known limitations','Some older device illustrations are SVG drawings rather than photographs, which may be less descriptive for screen reader users. We are working on adding more detailed alt text for these. If you encounter something you cannot use, please tell us.'],
-   ['Reporting a problem','If you find something on this site that you cannot access or use, email '+EMAIL+' or call '+PHONE+'. We take accessibility feedback seriously and will try to fix it.'],
+   ['Reporting a problem','If you find something on this site that you cannot access or use, use the contact form on this site. We take accessibility feedback seriously and will try to fix it.'],
    ['Legal context','In some jurisdictions, websites are required by law to be accessible to people with disabilities. We aim to meet or exceed those requirements because it is the right thing to do.'],
-   ['Contact','Questions about accessibility: '+EMAIL+' or '+PHONE+'. We will respond within 5 working days.']];
+   ['Contact','Questions about accessibility: use the contact form on this site. We will respond within 5 working days.']];
   return '<section class="wrap legal"><p class="crumb"><a href="#/">Home</a> / Accessibility</p>'+
    '<h1 class="serif">Accessibility</h1>'+
    '<p class="mute lgl-upd">Last updated '+upd+'</p>'+
@@ -2617,7 +2607,7 @@ function agentTools(bot){
       const subject=(s(i.purpose)||'Enquiry')+': '+(s(i.brand)+' '+s(i.model)).trim();
       var data={_subject:subject};lines.forEach(function(l){var j=l.indexOf(': ');if(j>0)data[l.slice(0,j)]=l.slice(j+2);});
       data['Source']='Chat assistant';
-      submitForm(data).then(function(ok){bot.sentNote=ok?('Enquiry sent to '+EMAIL):('Could not send. Please call '+PHONE+' or email '+EMAIL+'.');paintLog();});
+      submitForm(data).then(function(ok){bot.sentNote=ok?'Enquiry sent to our team.':'Could not send. Please try the contact form on the site.';paintLog();});
       return 'Enquiry submitted directly to the PhoneTrade inbox. Confirm to the customer that it has been sent and that the team will reply to the number or email they gave.';}},
    {name:'estimate_trade_in',description:'Instant trade-in or sell estimate for a catalog device in a given condition. Returns a low to high price range in NZD. Pass battery_health (a percent) if the customer gave one. Always describe it as a guide that is confirmed after inspection.',
     inputSchema:{type:'object',properties:{device_id:{type:'string'},condition:{type:'string'},battery_health:{type:'string'}},required:['device_id','condition']},
@@ -2796,7 +2786,7 @@ function chatGo(v){const h={contact:'#/contact',sell:'#/sell',trade:'#/trade-in'
 
 /* ---------- site data: hashing, storage, load and apply ---------- */
 /* Login for local mode. The password is never stored, only a salted hash. Change it in Admin, Security. */
-const ADMIN_DEFAULT={user:'ravinder89',salt:'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',hash:'1758d1dcd4225b1846f81821871ce683357620a6adf4b8dfe711b029b3f42055',iter:20000};
+const ADMIN_DEFAULT={user:'admin',salt:'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',hash:'1758d1dcd4225b1846f81821871ce683357620a6adf4b8dfe711b029b3f42055',iter:20000};
 const K256=(function(){const k=[];let n=2;while(k.length<64){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break;}if(p)k.push(Math.floor((Math.cbrt(n)%1)*4294967296));n++;}return k;})();
 const H256=(function(){const h=[];let n=2;while(h.length<8){let p=true;for(let i=2;i*i<=n;i++)if(n%i===0){p=false;break;}if(p)h.push(Math.floor((Math.sqrt(n)%1)*4294967296));n++;}return h;})();
 function sha256hex(msg){
@@ -2854,7 +2844,7 @@ const numOrNull=v=>(v===null||v===undefined||v===''||isNaN(+v))?null:+v;
 const numOr=(v,d)=>(v===null||v===undefined||v===''||isNaN(+v))?d:+v;
 function applySite(){
   const b=SITE.business||{};
-  EMAIL=b.email||'ravinderbhullar1789@gmail.com';PHONE=b.phone||'022 693 4984';TEL=String(PHONE).replace(/[^0-9+]/g,'')||'0226934984';
+  EMAIL=b.email||'';PHONE=b.phone||'';TEL=String(PHONE).replace(/[^0-9+]/g,'');
   COND.forEach((c,i)=>{const o=(SITE.conditions||[]).find(x=>x.id===c.id),d=COND_DEF[i];
     c.name=(o&&o.name)||d.name;c.line=(o&&o.line)||d.line;c.body=(o&&o.body)||d.body;c.rows=(o&&o.rows&&o.rows.length)?o.rows:d.rows;});
   const e=SITE.est||{};

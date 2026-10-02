@@ -1,39 +1,29 @@
 # Setting up real admin login
 
 The admin panel now uses a real, server-verified login instead of a
-password check that ran in the browser. Nothing works until you add three
-environment variables in Vercel - until then, the admin panel keeps working
-exactly as it did before (saved to your own browser only), so nothing breaks
-in the meantime.
+password check that ran in the browser. Nothing works until you add the
+environment variables below in Vercel - until then, the admin panel keeps
+working exactly as it did before (saved to your own browser only), so
+nothing breaks in the meantime.
 
-## 1. Generate your password hash
-
-On your own computer (not on the server, not here in chat - this keeps your
-real password private):
-
-```
-node scripts/hash-password.js "your real admin password"
-```
-
-It prints something like:
-
-```
-scrypt$3f1c...$9a02...
-```
-
-Copy that whole value.
-
-## 2. Add environment variables in Vercel
+## Add these environment variables in Vercel
 
 Project → Settings → Environment Variables. Add:
 
 | Name | Value |
 |---|---|
-| `ADMIN_USERNAME` | whatever username you want to log in with |
-| `ADMIN_PASSWORD_HASH` | the `scrypt$...` value from step 1 |
-| `SESSION_SECRET` | a long random string - generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `ADMIN_USERNAME` | your chosen admin username |
+| `ADMIN_PASSWORD_HASH` | generate with `node scripts/hash-password.js "your real password"` - copy the `scrypt$...` value it prints |
+| `SESSION_SECRET` | a long random string - generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `BUSINESS_EMAIL` | the inbox you want customer enquiries (contact, sell, trade-in) delivered to |
 
-Apply all three to Production (and Preview if you want the same login there).
+**Important: this file is in your public GitHub repository. Never paste the
+actual values into this file or any other file in the project** - only into
+Vercel's Environment Variables screen, which is private to your account.
+`SESSION_SECRET` especially must stay out of the repo: anyone who can read
+it could forge a valid admin login without ever knowing the password.
+
+Apply all four to Production (and Preview if you want the same behaviour there).
 
 ## 3. Redeploy
 

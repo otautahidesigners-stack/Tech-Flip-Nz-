@@ -1,0 +1,19 @@
+# Secrets - never commit real environment values
+.env
+.env.*
+!.env.example
+
+# Dependencies (none currently vendored, but keep this out if ever added)
+node_modules/
+
+# Vercel local config/cache
+.vercel
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Logs
+*.log
+npm-debug.log*

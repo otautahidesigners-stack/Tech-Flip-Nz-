@@ -13,7 +13,7 @@
         { "key": "X-XSS-Protection", "value": "0" },
         { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
         { "key": "Cross-Origin-Resource-Policy", "value": "same-origin" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'sha256-3HEZYj03VgK1RQ0A57Jj5GZ0Am7TtkaltCFnlHDT8dw=' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://formsubmit.co https://api.anthropic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://formsubmit.co; object-src 'none'; report-uri /api/csp-report; report-to csp-endpoint" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'sha256-3HEZYj03VgK1RQ0A57Jj5GZ0Am7TtkaltCFnlHDT8dw=' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.anthropic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; report-uri /api/csp-report; report-to csp-endpoint" },
         { "key": "Reporting-Endpoints", "value": "csp-endpoint=\"/api/csp-report\"" },
         { "key": "Access-Control-Allow-Origin", "value": "https://phonetrade.nz" }
       ]
